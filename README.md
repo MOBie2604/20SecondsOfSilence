@@ -58,7 +58,7 @@
 
 | 行为 | 需要用户做的操作 | 默认 | 怎么关掉 |
 | --- | --- | --- | --- |
-| **全屏不可关闭**：提醒窗口无边框、没有关闭按钮，屏蔽 `Esc` / `Alt+F4` | 无 | ✅ 开 | `fullscreen.allow_skip`: `false`↔`true` 反转；`allow_skip` 为 `true`（默认）时 `Esc`/单击可提前结束 |
+| **全屏不可关闭**：提醒窗口无边框、没有关闭按钮，鼠标点击、`Esc`、`Tab`、`Alt+F4` 均无法关闭 | 无 | ✅ 开 | `fullscreen.allow_skip`: 改成 `true` 则 `Esc` 可提前结束 |
 | **抢焦点**：把提醒窗口压到最前并强制切到前台 | 无 | ✅ 开 | 只能等倒计时结束（或不启用提醒）；生命周期仅限全屏提醒的 25 秒内 |
 | **屏蔽快捷键**：全屏期间吞掉 `Win`、`Alt+Tab`、`Alt+F4`、`Alt+Esc`、`Ctrl+Esc` | 无 | ✅ 开 | `fullscreen.block_task_switch_keys`: `false` |
 | **隐藏鼠标指针**：全屏期间指针消失 | 无 | ✅ 开 | `fullscreen.hide_cursor`: `false` |
@@ -68,13 +68,12 @@
 | **不联网**：*源码里没有 `socket` / `urllib` / `requests` / `http` 等任何网络调用* | — | — | 无需关闭（本来就没有） |
 | **管理员权限**：*不需要，也不请求，清单文件里是 `asInvoker`* | — | — | — |
 
-> 如果你想让"提醒"完全变成被动的一行字：`fullscreen.allow_skip` 保持 `true`（默认）即可让
-> `Esc` 随时打断；或干脆把 `fullscreen` 设成 `disabled`（见下文 `enabled` 用法，把
-> `fullscreen_countdown_seconds` 调到很小，或直接不看全屏——程序只在 `interval_minutes`
-> 到了才会弹）。
+> **默认就是最强模式**：全屏提醒期间鼠标点击、`Esc`、`Tab`、`Alt+F4` 都无法关闭，只能等倒计时
+> 走完（或按 `Ctrl+Alt+Del` 去任务管理器杀进程）。
 >
-> 想要**最温柔**的配置：`fullscreen.block_task_switch_keys: false` +
-> `fullscreen.hide_cursor: false` + `allow_skip: true`，它就只是一个会弹出来 25 秒的提醒牌。
+> 想要**温柔一点**的配置：把 `fullscreen.allow_skip` 改成 `true`（这样 `Esc` 可以提前结束），
+> 再配合 `fullscreen.block_task_switch_keys: false` + `fullscreen.hide_cursor: false`，
+> 它就只是一个弹出 25 秒、拦不住你切窗口的提醒牌。
 
 ---
 
@@ -239,7 +238,7 @@ python -m PyInstaller main.py --onedir --windowed --name EyeGuard ^
 | `fps` | `50` | 动画帧率（10–120） |
 | `countdown_number_inside` | `false` | 是否把剩余秒数画在圆环正中间 |
 | `hide_cursor` | `true` | 全屏期间隐藏鼠标指针 |
-| `allow_skip` | `true` | **`true`：`Esc`/单击可提前结束；`false`：只能等倒计时走完**（"强制"模式） |
+| `allow_skip` | `false` | **`false`：鼠标点击 / `Esc` / `Tab` 都无法关闭，只能等倒计时走完**（默认，"强制"模式）；改成 `true` 则 `Esc` 可提前结束 |
 | `topmost_refresh_ms` | `300` | 多久重新抢一次置顶（防被其他置顶窗盖住） |
 | `block_task_switch_keys` | `true` | 屏蔽 `Win`/`Alt+Tab`/`Alt+F4`/`Alt+Esc`/`Ctrl+Esc`（仅 Windows） |
 
@@ -281,8 +280,8 @@ python -m PyInstaller main.py --onedir --windowed --name EyeGuard ^
 // 2) 不要"强制"：按 Esc 就能关
 "fullscreen": { "allow_skip": true, ... }
 
-// 3) 最温柔模式：不拦按键、不藏鼠标
-"fullscreen": { "block_task_switch_keys": false, "hide_cursor": false, ... }
+// 3) 温柔模式：不拦按键、不藏鼠标、Esc 可提前关
+"fullscreen": { "block_task_switch_keys": false, "hide_cursor": false, "allow_skip": true, ... }
 
 // 4) 不想看到浮窗（只在时间到的时候全屏提醒一次）
 "floating": { "enabled": false, ... }
@@ -369,9 +368,10 @@ python _smoke_test.py
 这是**用户态**普通 API，不需要管理员权限，只在全屏提醒的 25 秒内生效，提醒结束立刻卸载。
 不想让它碰键盘：`fullscreen.block_task_switch_keys: false`。
 
-**Q：想让提醒真的关不掉？**
-`fullscreen.allow_skip: false`（此时 `Esc` 也不起作用，只能等倒计时走完）。
-另外 `Ctrl+Alt+Del` 是内核级组合键，任何用户态程序都拦不住，这一点请知悉。
+**Q：想让提醒更容易接受一点？**
+默认 `fullscreen.allow_skip` 就是 `false`，鼠标点击、`Esc`、`Tab` 都关不掉，只能等倒计时走完。
+想按 `Esc` 提前结束就把它改成 `true`。
+另：`Ctrl+Alt+Del` 是内核级组合键，任何用户态程序都拦不住，真不想看了可以用它去任务管理器结束进程。
 
 **Q：为什么没有静音功能？**
 本程序**不控制音量、不出声**。提醒是视觉的（全屏倒计时），声音留给你自己决定。
