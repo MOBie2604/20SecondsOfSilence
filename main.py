@@ -33,7 +33,6 @@ import math
 import os
 import platform
 import random
-import subprocess
 import sys
 import threading
 import time
@@ -50,6 +49,68 @@ _IS_MAC = sys.platform == "darwin"
 _IS_LINUX = sys.platform.startswith("linux")
 
 FROZEN = bool(getattr(sys, "frozen", False))          # 是否由 PyInstaller 打包成 exe
+
+
+# =============================================================================
+#  网络封锁：从运行时层面断绝一切联网可能
+# =============================================================================
+#
+#  这个程序本身没有任何网络代码（没有 import socket / ssl / urllib / http），
+#  但“没写”不等于“不可能”。为了让用户可以公开验证“它绝对不联网”，
+#  我们在启动时主动把网络相关的标准库模块从 import 系统里摘掉：
+#
+#    - 之后任何代码（包括将来有人不小心加的）执行 import socket 都会直接失败；
+#    - 不会影响 tkinter / ctypes / json / threading 等本程序真正需要的模块。
+#
+#  被封锁的模块清单见 _NET_MODULES。运行时只做一次，成本可以忽略。
+# =============================================================================
+
+_NET_MODULES = (
+    "socket", "_socket", "ssl", "_ssl", "http", "http.client", "http.server",
+    "urllib", "urllib.request", "urllib.error", "urllib.parse", "urllib.robotparser",
+    "ftplib", "smtplib", "poplib", "imaplib", "nntplib", "telnetlib",
+    "xmlrpc", "xmlrpc.client", "xmlrpc.server", "socketserver",
+    "asyncio", "selectors", "webbrowser",
+    "requests", "urllib3", "aiohttp", "httpx", "websocket",
+)
+
+
+def forbid_network():
+    """把网络模块从 sys.modules 摘掉，并装一个 meta_path 拦截器。
+
+    效果：本进程内任何 `import socket` / `import urllib.request` 都会抛
+    ImportError（哪怕模块已经加载过），从而在代码层面断绝联网可能。
+
+    返回被成功封锁的模块数量（仅用于日志展示）。
+    """
+    blocked = 0
+    for name in _NET_MODULES:
+        # 1) 从已加载模块表里移除（若 tkinter 间接引入了，也一并摘掉）
+        sys.modules.pop(name, None)
+
+    class _NetworkBlocker(object):
+        """import 系统的拦截器：命中黑名单直接抛 ImportError。"""
+
+        blacklist = set(_NET_MODULES)
+
+        # 兼容 Python 3.4+ 的 find_spec 协议（3.15 也走这个）
+        @staticmethod
+        def find_spec(fullname, path=None, target=None):
+            root = fullname.split(".")[0]
+            if fullname in _NetworkBlocker.blacklist or root in ("socket", "ssl", "urllib", "http", "ftplib",
+                                                                 "smtplib", "poplib", "imaplib", "nntplib", "telnetlib",
+                                                                 "xmlrpc", "socketserver", "asyncio", "webbrowser",
+                                                                 "requests", "urllib3", "aiohttp", "httpx", "websocket"):
+                raise ImportError(
+                    "EyeGuard 已禁用网络模块：%s（本程序承诺绝不联网）" % fullname)
+            return None
+
+    # 装在 meta_path 最前面，保证先于任何 finder 命中
+    blocker = _NetworkBlocker()
+    if not any(getattr(f, "__name__", "") == "_NetworkBlocker" for f in sys.meta_path):
+        sys.meta_path.insert(0, blocker)
+    blocked = len(_NET_MODULES)
+    return blocked
 
 
 def _app_dir():
@@ -540,7 +601,7 @@ DEFAULT_CONFIG = OrderedDict([
         ("sub_font_size", 14),
         ("countdown_number_inside", False),
         ("hide_cursor", True),
-        ("allow_skip", True),
+        ("allow_skip", False),
         ("topmost_refresh_ms", 300),
         ("block_task_switch_keys", True),
     ])),
@@ -861,12 +922,23 @@ class FullscreenReminder(object):
             self.win.bind_all(seq, self._swallow, add="+")
         self.win.bind("<Alt-Tab>", self._swallow)
         self.win.bind("<Alt-Key-ISO_Left_Tab>", self._swallow)   # Linux/mac 的 Shift+Tab
-        # 允许提前结束时：Esc 或单击任意处立即关闭
-        if self.fs.get("allow_skip", True):
+        # ---- 拦截“提前结束”的入口 ----
+        # 设计原则：全屏提醒是用来强制休息的，默认不允许任何方式提前跳过，
+        # 只能等倒计时走完自动关闭。只有用户明确把 allow_skip 改成 true 时，
+        # 才额外开放 Esc 一种退出方式（鼠标点击永远不退出，避免误触）。
+        #
+        # 注意：以前这里默认 allow_skip=True 并且绑定了 <Button-1>，
+        # 导致用户在全屏页面上随便点一下就退出了，等于提醒形同虚设。已修正。
+        if self.fs.get("allow_skip", False):
             self.win.bind_all("<Escape>", self._skip, add="+")
-            self.win.bind("<Button-1>", self._skip)
         else:
+            # 默认分支：Esc 也被吞掉，除了等倒计时没有任何退出途径
             self.win.bind_all("<Escape>", self._swallow, add="+")
+        # 鼠标左键在提醒页面上什么也不做（也不传递下去，防止误触其他窗口）
+        self.win.bind("<Button-1>", self._swallow)
+        self.win.bind("<Button-2>", self._swallow)
+        self.win.bind("<Button-3>", self._swallow)
+        self.win.bind("<Double-Button-1>", self._swallow)
         self.win.bind("<Destroy>", self._on_destroy, add="+")
 
         self.app.notify("fullscreen_open", self)
@@ -1033,12 +1105,14 @@ class FloatingWindow(object):
         self._apply_window_chrome()
         # 窗口被销毁（程序退出）时撤销自己挂的 after 回调
         self.win.bind("<Destroy>", self._on_destroy, add="+")
-        # 非 Windows 平台用 Tk 事件拖动；Windows 由原生 HWND 钩子处理（见 show()）
-        if not _IS_WIN:
-            for seq in ("<ButtonPress-1>", "<B1-Motion>", "<ButtonRelease-1>",
-                        "<Button-3>", "<Button-2>"):
-                self.canvas.bind(seq, self._tk_mouse)
-                self.win.bind(seq, self._tk_mouse)
+        # 鼠标事件双保险：
+        #  - Windows 上主要靠原生 HWND 钩子（见 show() -> subclass_mouse）拖动；
+        #  - 但色键透明 + WS_EX_NOACTIVATE 的窗口在某些系统上会把 WM_RBUTTONUP
+        #    吞掉，导致右键菜单弹不出来。所以 Tk 事件也一并绑上，谁先到谁处理。
+        #  只绑 canvas：canvas 铺满整个窗口，事件会冒泡到 win，再绑 win 会重复触发。
+        for seq in ("<ButtonPress-1>", "<B1-Motion>", "<ButtonRelease-1>",
+                    "<Button-3>", "<Button-2>"):
+            self.canvas.bind(seq, self._tk_mouse)
         self.win.protocol("WM_DELETE_WINDOW", lambda: None)
         self._drag_off = None
         self._bar_frac = None
@@ -1050,18 +1124,32 @@ class FloatingWindow(object):
         return "#f0f1f2" if key.lower() in clash else key
 
     def _tk_mouse(self, event):
-        """非 Windows 下的拖动 / 菜单（Windows 走原生钩子）。"""
+        """Tk 鼠标事件：拖动浮窗 + 右键菜单。
+
+        Windows 上原生钩子和 Tk 事件两条路都会到，但不会重复动作：
+        - 右键：走这里（原生钩子在色键窗口上不一定能收到 WM_RBUTTONUP）；
+        - 左键拖动：如果原生钩子已经在拖（self.app._native_dragging 为真），
+          这里就完全不管，避免两边各算一套偏移把窗口拽飞。
+        """
         if event.type == tk.EventType.ButtonPress:
             if event.num in (2, 3):
-                self.app.popup_menu(event)
+                self.app.show_menu(event.x_root, event.y_root)
+                return
+            if getattr(self.app, "_native_dragging", False):
                 return
             self._drag_off = (event.x_root - self.pos_x, event.y_root - self.pos_y)
-        elif event.type == tk.EventType.Motion and self._drag_off:
-            self.drag_to(event.x_root - self._drag_off[0],
-                         event.y_root - self._drag_off[1])
-        elif event.type == tk.EventType.ButtonRelease and self._drag_off:
-            self._drag_off = None
-            self.app.remember_position(self.pos_x, self.pos_y)
+        elif event.type == tk.EventType.Motion:
+            if getattr(self.app, "_native_dragging", False):
+                return
+            if self._drag_off:
+                self.drag_to(event.x_root - self._drag_off[0],
+                             event.y_root - self._drag_off[1])
+        elif event.type == tk.EventType.ButtonRelease:
+            if getattr(self.app, "_native_dragging", False):
+                return
+            if self._drag_off:
+                self._drag_off = None
+                self.app.remember_position(self.pos_x, self.pos_y)
 
     def _on_destroy(self, event):
         if event.widget is not self.win:
@@ -1231,6 +1319,7 @@ class FloatingWindow(object):
 class EyeGuardApp(object):
     TICK_MS = 100            # 浮窗刷新周期（毫秒）
     CONFIG_CHECK_MS = 2000   # 配置文件热重载检查周期
+    MENU_POLL_MS = 150       # 右键菜单“是否已关闭”的轮询周期
 
     def __init__(self, config_path, demo=False):
         self.cfg = Config(config_path)
@@ -1245,6 +1334,8 @@ class EyeGuardApp(object):
 
         self.floating = None
         self.reminder = None                 # 当前打开的全屏提醒
+        # 原生窗口钩子是否正在处理左键拖动（用来让 Tk 的 <B1-Motion> 让路）
+        self._native_dragging = False
         self.next_due = time.monotonic() + self.cfg.data["interval_minutes"] * 60.0
         self.cycle_total = self.cfg.data["interval_minutes"] * 60.0
         self.fired_warns = set()             # 本周期已经触发过的预警点
@@ -1282,10 +1373,36 @@ class EyeGuardApp(object):
         if fl.get("enabled", True):
             self.floating = FloatingWindow(self)
             self.floating.show()
+            # 浮窗建好之后，把右键菜单重新挂到这个可见的窗口上
+            # （菜单不能挂在被 withdraw() 的 root 上，那样弹不出来）
+            self._rebuild_menu_on_floating()
         self._apply_schedule(silent=True)
 
+    def _rebuild_menu_on_floating(self):
+        """把右键菜单改挂到浮窗上。浮窗没启用就保持挂在 root（无浮窗时也点不到）。"""
+        fw = self.floating
+        if fw is None:
+            return
+        old_var = getattr(self, "autostart_var", None)
+        old_state = None
+        if old_var is not None:
+            try:
+                old_state = bool(old_var.get())
+            except Exception:
+                old_state = None
+        self._build_menu()
+        if old_state is not None and getattr(self, "autostart_var", None) is not None:
+            try:
+                self.autostart_var.set(old_state)
+            except Exception:
+                pass
+
     def _build_menu(self):
-        self.menu = tk.Menu(self.root, tearoff=0)
+        # 坑：菜单的父窗口如果是被 withdraw() 隐藏的 root，tk_popup()/post()
+        # 会静默失效（菜单压根不显示，也没有任何异常）。所以这里把菜单挂到
+        # 真正可见的浮窗上；浮窗还没建好时先挂 root，等浮窗建好后再重建。
+        parent = self.floating.win if self.floating is not None else self.root
+        self.menu = tk.Menu(parent, tearoff=0)
         self.menu.add_command(label="立即休息（测试全屏提醒）", command=self.trigger_reminder)
         self.menu.add_command(label="从 5 秒后开始提醒（测试预警）",
                               command=lambda: self._force_warn_test())
@@ -1313,47 +1430,65 @@ class EyeGuardApp(object):
         self.show_menu(event.x_root, event.y_root)
 
     def show_menu(self, x, y):
-        """弹出右键菜单。
+        """弹出右键菜单（必须在 Tk 主线程执行）。
 
-        tk_popup() 会自己跑一个嵌套事件循环（等菜单关闭才返回），在原生窗口过程 /
-        Tk 回调里直接调用会“卡住”到菜单关闭为止。所以把弹出动作丢到一个短命的
-        工作线程里执行，Tk 主循环继续转（菜单交互、动画都不受影响）。
-        线程里只做 Tk 调用，失败就直接忽略：菜单打不开也不影响主功能。
+        坑：tk_popup() 内部会跑一个嵌套事件循环（等菜单关闭才返回）。
+        早先版本把这段丢到工作线程里跑，结果 Tk 不是线程安全的，菜单
+        根本弹不出来、线程还会挂死在那里。所以这里一律调度回主线程执行：
+
+        - 原生窗口过程（WM_RBUTTONUP 回调）里不能直接调用，用 after(0) 排队；
+        - Tk 自己的回调里已经在主线程，直接调用也没问题，统一走 after(0)
+          可以保证两者行为一致，并且能把“上一次还没关的菜单”先收起来。
         """
-        def worker():
-            try:
-                if self._menu_unpost_job:
-                    try:
-                        self.root.after_cancel(self._menu_unpost_job)
-                    except Exception:
-                        pass
-                    self._menu_unpost_job = None
-                self.root.after(0, lambda: self._menu_prepare())
-                self.menu.tk_popup(x, y)
-            except Exception as exc:
-                log("右键菜单弹出失败：%s" % exc)
-            finally:
-                self.root.after(0, self._menu_done)
-
-        th = threading.Thread(target=worker, name="eyeguard-menu", daemon=True)
-        th.start()
-
-    def _menu_prepare(self):
         try:
-            self.menu.unpost()
-        except Exception:
-            pass
+            self.root.after(0, lambda: self._popup_now(int(x), int(y)))
+        except Exception as exc:
+            log("右键菜单调度失败：%s" % exc)
 
-    def _menu_done(self):
+    def _popup_now(self, x, y):
+        """真正弹菜单，一定跑在主线程。"""
         if not self.running:
             return
         try:
-            self._menu_unpost_job = self.root.after(10, self._menu_unpost)
+            # 先收掉可能还挂着的旧菜单，避免叠出两个
+            try:
+                self.menu.unpost()
+            except Exception:
+                pass
+            if self._menu_unpost_job is not None:
+                try:
+                    self.root.after_cancel(self._menu_unpost_job)
+                except Exception:
+                    pass
+                self._menu_unpost_job = None
+            # 用 post() 而不是 tk_popup()：post() 只把菜单贴上去就立刻返回，
+            # 不会开嵌套事件循环，主循环（倒计时动画）继续正常走。
+            # 菜单的关闭由下面的轮询负责（点到别处 / 选了某项 / 按 Esc）。
+            self.menu.post(x, y)
+            self._menu_unpost_job = self.root.after(
+                self.MENU_POLL_MS, self._menu_poll)
+        except Exception as exc:
+            log("右键菜单弹出失败：%s" % exc)
+
+    def _menu_poll(self):
+        """轮询菜单是否还开着，关了就停掉轮询。
+
+        注意：原生弹出菜单的 winfo_ismapped() 在 Windows 上不可靠（实测菜单明明
+        显示着，它却一直返回 False），所以不能用它判断菜单是否已关闭——那样会在
+        菜单刚弹出时就被误判为“已关闭”，于是立刻 unpost 把菜单收掉。
+        这里只定期复查：只要菜单还在，就继续保持轮询；用户点选/点外面时 Tk 会自己
+        隐藏菜单，此时再把轮询任务撤掉即可。
+        """
+        self._menu_unpost_job = None
+        if not self.running:
+            return
+        try:
+            self._menu_unpost_job = self.root.after(
+                self.MENU_POLL_MS, self._menu_poll)
         except Exception:
             self._menu_unpost_job = None
 
-    def _menu_unpost(self):
-        self._menu_unpost_job = None
+    def _menu_prepare(self):
         try:
             self.menu.unpost()
         except Exception:
@@ -1519,15 +1654,28 @@ class EyeGuardApp(object):
             log("重新加载失败：%s" % exc)
 
     def open_config_dir(self):
+        """打开配置所在文件夹。
+
+        为了彻底避免创建外部进程（os.system 会 spawn 一个 shell），
+        这里全部改用系统 API：
+          Windows -> ShellExecuteW
+          macOS   -> NSWorkspace 通过 osascript 的方式同样要起进程，
+                     所以退化为“什么也不做，只在日志里告诉用户路径”，
+                     由用户自己打开；这样跨平台代码里也没有进程调用。
+        注意：本函数不联网、不创建子进程（Windows 走 ShellExecuteW，
+        它由 explorer 处理，属于系统 shell 行为，不涉及网络）。
+        """
         try:
             if _IS_WIN:
-                os.startfile(APP_DIR)  # type: ignore[attr-defined]
-            elif _IS_MAC:
-                os.system('open "%s"' % APP_DIR)
+                import ctypes
+                # SW_SHOWNORMAL = 1
+                ctypes.windll.shell32.ShellExecuteW(
+                    None, "open", APP_DIR, None, None, 1)
             else:
-                os.system('xdg-open "%s" >/dev/null 2>&1 &' % APP_DIR)
+                # 非 Windows 不调用任何外部命令，只记录路径
+                log("配置文件夹：%s" % APP_DIR)
         except Exception as exc:
-            log("打开目录失败：%s" % exc)
+            log("打开目录失败：%s（路径：%s）" % (exc, APP_DIR))
 
     # ---------------------------------------------------------------- 浮窗拖动回调
 
@@ -1537,10 +1685,13 @@ class EyeGuardApp(object):
         if fw is None:
             return None
         if action == "drag_start":
+            # 标记“原生钩子正在拖”，让 Tk 的 <B1-Motion> 别再插一脚
+            self._native_dragging = True
             return (x - fw.pos_x, y - fw.pos_y)
         if action == "drag_move" and offset:
             fw.drag_to(x - offset[0], y - offset[1])
         elif action == "drag_end":
+            self._native_dragging = False
             self.remember_position(fw.pos_x, fw.pos_y)
         elif action == "menu":
             self.show_menu(x, y)
@@ -1672,11 +1823,9 @@ def _startup_lnk():
 
 
 def autostart_enabled():
+    """当前是否已开启开机自启动（只查 HKCU Run 项）。"""
     if not _IS_WIN:
         return False
-    lnk = _startup_lnk()
-    if os.path.exists(lnk):
-        return True
     try:
         import winreg
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
@@ -1687,59 +1836,39 @@ def autostart_enabled():
         return False
 
 
+
 def set_autostart(enable):
-    """把/移除快捷方式放进“启动”文件夹。返回是否成功。"""
+    """把/移除自启动项。返回是否成功。
+
+    为什么用注册表 Run 项、而不是“启动”文件夹的 .lnk：
+      写 .lnk 需要调 Windows 的 COM 组件（IShellLink），从纯 ctypes 调
+      COM 很容易出错（字符串封送、vtable 下标、内存布局……全都要手写）。
+      Run 注册表项是实现开机自启动的另一种官方机制，只要一行 winreg：
+        HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run
+      它同样不启动任何外部进程、不需要管理员权限、不联网，
+      而且路径是明文，用户/杀毒软件一眼就能看清，比 .lnk 二进制更透明。
+    """
     if not _IS_WIN:
         return False
-    lnk = _startup_lnk()
     try:
-        if not enable:
-            if os.path.exists(lnk):
-                os.remove(lnk)
-            try:                      # 连带清掉可能存在的注册表 Run 项
-                import winreg
-                with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                                    r"Software\Microsoft\Windows\CurrentVersion\Run", 0,
-                                    winreg.KEY_SET_VALUE) as k:
-                    winreg.DeleteValue(k, "EyeGuard")
-            except Exception:
-                pass
-            return True
-
-        os.makedirs(_startup_dir(), exist_ok=True)
-        exe = os.path.abspath(sys.executable)
-        target = exe
-        arguments = ""
-        icon = exe
-        if not FROZEN:
-            pyw = os.path.join(os.path.dirname(exe), "pythonw.exe")
-            target = pyw if os.path.isfile(pyw) else exe
-            arguments = '"%s"' % os.path.abspath(__file__)
-            icon = target
-        script = (
-            "$s = (New-Object -ComObject WScript.Shell).CreateShortcut('%s');"
-            "$s.TargetPath = '%s';"
-            "$s.Arguments = '%s';"
-            "$s.WorkingDirectory = '%s';"
-            "$s.IconLocation = '%s,0';"
-            "$s.Description = 'EyeGuard 护眼提醒';"
-            "$s.Save()"
-        ) % (lnk.replace("'", "''"), target.replace("'", "''"),
-             arguments.replace("'", "''"), APP_DIR.replace("'", "''"),
-             icon.replace("'", "''"))
-        subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
-                        "-Command", script],
-                       check=False, capture_output=True,
-                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        if os.path.exists(lnk):
-            return True
-        # PowerShell 不可用时退回注册表 Run 项
         import winreg
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                            r"Software\Microsoft\Windows\CurrentVersion\Run", 0,
-                            winreg.KEY_SET_VALUE) as k:
-            winreg.SetValueEx(k, "EyeGuard", 0, winreg.REG_SZ, _autostart_cmd())
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0,
+                            winreg.KEY_READ | winreg.KEY_SET_VALUE) as k:
+            if enable:
+                cmd = _autostart_cmd()
+                winreg.SetValueEx(k, "EyeGuard", 0, winreg.REG_SZ, cmd)
+                log("已开启开机自启动：%s" % cmd)
+            else:
+                try:
+                    winreg.DeleteValue(k, "EyeGuard")
+                    log("已关闭开机自启动")
+                except FileNotFoundError:
+                    pass
         return True
+    except Exception as exc:
+        log("设置开机自启动失败：%s" % exc)
+        return False
     except Exception as exc:
         log("设置开机自启动失败：%s" % exc)
         return False
@@ -1766,6 +1895,9 @@ def main(argv=None):
         if not frozen_gui_error(msg):
             sys.stderr.write(msg + "\n")
         return 1
+
+    # 先把网络模块锁死：之后整个进程里任何 import socket / ssl / urllib 都会失败
+    n_blocked = forbid_network()
 
     enable_dpi_awareness()
     if _IS_WIN:

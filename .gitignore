@@ -23,3 +23,7 @@ dist/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ²âÊÔ²úÎï
+_smoke_tmp/
+_smoke_tmp
