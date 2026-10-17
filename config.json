@@ -1,0 +1,64 @@
+{
+  "interval_minutes": 20,
+  "fullscreen_countdown_seconds": 25,
+  "warn_seconds": [30, 5],
+
+  "reminder_messages": [
+    "你已经玩了 {minutes} 分钟，为了眼睛，去看看外面吧！",
+    "叮！{minutes} 分钟到啦，窗外有风景，屏幕有蓝光，你选哪个？",
+    "你的眼睛向你提交了第 {minutes} 分钟的加班申请，请立刻驳回。",
+    "游戏角色不会累，你的眼睛会。已经 {minutes} 分钟了，起来看看远处吧。",
+    "休息 25 秒，回来继续肝 —— {minutes} 分钟的马不停蹄，眼睛需要喘口气。",
+    "别眨眼，眨眼你也躲不过：你已经玩了 {minutes} 分钟，该看窗外了。",
+    "前方高能：连续 {minutes} 分钟盯屏幕，眼球表示压力很大，请望向远方。",
+    "这 {minutes} 分钟，你的世界只有这一块屏幕；接下来二十几秒，请还给世界。"
+  ],
+
+  "fullscreen": {
+    "title": "该休息啦",
+    "bg_color": "#0b0e14",
+    "track_color": "#242a38",
+    "track_width": 14,
+    "fg_color": "#ffffff",
+    "sub_color": "#8b93a7",
+    "circle_color": "#33d17a",
+    "circle_width": 14,
+    "circle_radius": 120,
+    "dot_radius": 12,
+    "dot_color": "",
+    "fps": 50,
+    "message_font_size": 26,
+    "sub_font_size": 14,
+    "countdown_number_inside": false,
+    "hide_cursor": true,
+    "allow_skip": true,
+    "topmost_refresh_ms": 300,
+    "block_task_switch_keys": true
+  },
+
+  "floating": {
+    "enabled": true,
+    "width": 220,
+    "height": 96,
+    "x": 60,
+    "y": 60,
+    "alpha": 0.82,
+    "font_size": 34,
+    "label_font_size": 11,
+    "bg_color": "#141821",
+    "key_color": "#010203",
+    "fg_color": "#ffffff",
+    "label_color": "#8b93a7",
+    "normal_border": "#3a4256",
+    "warn_border": "#ffb000",
+    "warn_bg": "#3a2a05",
+    "warn_text_color": "#ffb000",
+    "blink_interval_ms": 400
+  },
+
+  "prewarn": {
+    "enabled": true,
+    "text_template": "{seconds} 秒后该看外面啦",
+    "urgent_text_template": "还有 {seconds} 秒！"
+  }
+}

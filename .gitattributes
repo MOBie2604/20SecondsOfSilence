@@ -1,0 +1,16 @@
+# 统一换行符，避免 Windows/macOS/Linux 协作时整文件 diff
+* text=auto eol=lf
+
+# Windows 批处理必须是 CRLF，否则某些情况下 cmd 解析会出问题
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制文件，不要做换行符转换
+*.png binary
+*.ico binary
+*.exe binary
+*.dll binary
+*.zip binary
+
+# 语言标注（GitHub 语言统计更准确）
+*.py linguist-language=Python
