@@ -1,0 +1,89 @@
+name: Bug 反馈
+description: 程序没按预期工作？在这里报告
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！为了让我能复现问题，请尽量填完整。
+        **注意：不要在这里贴你的完整 config.json**（可能含个人信息），只贴相关的那几行即可。
+
+  - type: dropdown
+    id: run_mode
+    attributes:
+      label: 你怎么运行的？
+      options:
+        - 源码版（python main.py）
+        - 打包版（Release 里的 EyeGuard.exe）
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      placeholder: 例如 Windows 11 23H2 / Windows 10 22H2
+    validations:
+      required: true
+
+  - type: input
+    id: python_version
+    attributes:
+      label: Python 版本（源码版才填）
+      placeholder: 例如 3.12.4，运行 python --version 可得
+    validations:
+      required: false
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: 发生了什么
+      description: 描述你看到的现象
+      placeholder: 例如：全屏提醒弹出来了，但游戏还在最前面盖住了它
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 你期望发生什么
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      description: 如果能缩小到最小复现，请写清楚
+      placeholder: |
+        1. 把 interval_minutes 改成 0.1
+        2. 启动程序
+        3. 等待约 6 秒
+        4. 看到...
+    validations:
+      required: false
+
+  - type: textarea
+    id: log
+    attributes:
+      label: 日志
+      description: |
+        把程序目录下 `eyeguard.log` 的内容贴上来（在程序目录里找，或用右键菜单「打开配置文件夹」）。
+        日志不含任何隐私信息，只有启动/预警/提醒的时间点和错误。
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: config
+    attributes:
+      label: 相关配置片段
+      description: 只贴你改过的那几行，不要贴整个文件
+      placeholder: |
+        例如：
+        "interval_minutes": 20,
+        "fullscreen": { "topmost_refresh_ms": 300 }
+      render: json
+    validations:
+      required: false

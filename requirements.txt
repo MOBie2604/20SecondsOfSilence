@@ -1,0 +1,24 @@
+# EyeGuard 依赖清单
+#
+# 结论：不需要任何第三方库。
+# 程序只用 Python 标准库：tkinter / ctypes / json / threading / math / time …
+# Windows 专用能力（置顶、抢焦点、键盘钩子、透明圆角、单实例、开机自启）
+# 全部通过内置 ctypes 调用系统 API 实现，没有 pycaw / comtypes / keyboard
+# 之类的扩展包，所以：
+#
+#   Windows / macOS：装好 Python（含 tkinter）就能 python main.py 直接跑
+#   Debian / Ubuntu：sudo apt install python3-tk（tkinter 在部分发行版要单独装）
+#   Fedora：         sudo dnf install python3-tkinter
+#
+# 也不要 pip install pycaw：那是控制音量的库，本程序没有静音功能；
+# keyboard 库需要管理员权限且容易杀软误报，本程序用 ctypes 低级键盘钩子替代。
+
+# ---- 第三方运行时依赖 ----
+# （无）
+
+# ---- 可选的开发期工具（不装也能正常运行程序）----
+# 仅当你要自己打包成单个 exe 时才需要：
+# pyinstaller>=6.0
+
+# ---- Python 版本 ----
+# 需要 Python >= 3.8（用到 f-string 之外的标准库特性较少，3.8+ 均验证可跑）

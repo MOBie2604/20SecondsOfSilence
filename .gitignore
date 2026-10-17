@@ -1,0 +1,25 @@
+# EyeGuard 运行产物（每台机器自己生成，不要提交）
+eyeguard.log
+config.json.tmp
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+
+# PyInstaller 打包产物（发布时作为 Release 附件，不进仓库）
+build/
+dist/
+*.spec
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
