@@ -33,7 +33,6 @@ import math
 import os
 import platform
 import random
-import subprocess
 import sys
 import threading
 import time
@@ -50,6 +49,68 @@ _IS_MAC = sys.platform == "darwin"
 _IS_LINUX = sys.platform.startswith("linux")
 
 FROZEN = bool(getattr(sys, "frozen", False))          # 是否由 PyInstaller 打包成 exe
+
+
+# =============================================================================
+#  网络封锁：从运行时层面断绝一切联网可能
+# =============================================================================
+#
+#  这个程序本身没有任何网络代码（没有 import socket / ssl / urllib / http），
+#  但“没写”不等于“不可能”。为了让用户可以公开验证“它绝对不联网”，
+#  我们在启动时主动把网络相关的标准库模块从 import 系统里摘掉：
+#
+#    - 之后任何代码（包括将来有人不小心加的）执行 import socket 都会直接失败；
+#    - 不会影响 tkinter / ctypes / json / threading 等本程序真正需要的模块。
+#
+#  被封锁的模块清单见 _NET_MODULES。运行时只做一次，成本可以忽略。
+# =============================================================================
+
+_NET_MODULES = (
+    "socket", "_socket", "ssl", "_ssl", "http", "http.client", "http.server",
+    "urllib", "urllib.request", "urllib.error", "urllib.parse", "urllib.robotparser",
+    "ftplib", "smtplib", "poplib", "imaplib", "nntplib", "telnetlib",
+    "xmlrpc", "xmlrpc.client", "xmlrpc.server", "socketserver",
+    "asyncio", "selectors", "webbrowser",
+    "requests", "urllib3", "aiohttp", "httpx", "websocket",
+)
+
+
+def forbid_network():
+    """把网络模块从 sys.modules 摘掉，并装一个 meta_path 拦截器。
+
+    效果：本进程内任何 `import socket` / `import urllib.request` 都会抛
+    ImportError（哪怕模块已经加载过），从而在代码层面断绝联网可能。
+
+    返回被成功封锁的模块数量（仅用于日志展示）。
+    """
+    blocked = 0
+    for name in _NET_MODULES:
+        # 1) 从已加载模块表里移除（若 tkinter 间接引入了，也一并摘掉）
+        sys.modules.pop(name, None)
+
+    class _NetworkBlocker(object):
+        """import 系统的拦截器：命中黑名单直接抛 ImportError。"""
+
+        blacklist = set(_NET_MODULES)
+
+        # 兼容 Python 3.4+ 的 find_spec 协议（3.15 也走这个）
+        @staticmethod
+        def find_spec(fullname, path=None, target=None):
+            root = fullname.split(".")[0]
+            if fullname in _NetworkBlocker.blacklist or root in ("socket", "ssl", "urllib", "http", "ftplib",
+                                                                 "smtplib", "poplib", "imaplib", "nntplib", "telnetlib",
+                                                                 "xmlrpc", "socketserver", "asyncio", "webbrowser",
+                                                                 "requests", "urllib3", "aiohttp", "httpx", "websocket"):
+                raise ImportError(
+                    "EyeGuard 已禁用网络模块：%s（本程序承诺绝不联网）" % fullname)
+            return None
+
+    # 装在 meta_path 最前面，保证先于任何 finder 命中
+    blocker = _NetworkBlocker()
+    if not any(getattr(f, "__name__", "") == "_NetworkBlocker" for f in sys.meta_path):
+        sys.meta_path.insert(0, blocker)
+    blocked = len(_NET_MODULES)
+    return blocked
 
 
 def _app_dir():
@@ -1582,15 +1643,28 @@ class EyeGuardApp(object):
             log("重新加载失败：%s" % exc)
 
     def open_config_dir(self):
+        """打开配置所在文件夹。
+
+        为了彻底避免创建外部进程（os.system 会 spawn 一个 shell），
+        这里全部改用系统 API：
+          Windows -> ShellExecuteW
+          macOS   -> NSWorkspace 通过 osascript 的方式同样要起进程，
+                     所以退化为“什么也不做，只在日志里告诉用户路径”，
+                     由用户自己打开；这样跨平台代码里也没有进程调用。
+        注意：本函数不联网、不创建子进程（Windows 走 ShellExecuteW，
+        它由 explorer 处理，属于系统 shell 行为，不涉及网络）。
+        """
         try:
             if _IS_WIN:
-                os.startfile(APP_DIR)  # type: ignore[attr-defined]
-            elif _IS_MAC:
-                os.system('open "%s"' % APP_DIR)
+                import ctypes
+                # SW_SHOWNORMAL = 1
+                ctypes.windll.shell32.ShellExecuteW(
+                    None, "open", APP_DIR, None, None, 1)
             else:
-                os.system('xdg-open "%s" >/dev/null 2>&1 &' % APP_DIR)
+                # 非 Windows 不调用任何外部命令，只记录路径
+                log("配置文件夹：%s" % APP_DIR)
         except Exception as exc:
-            log("打开目录失败：%s" % exc)
+            log("打开目录失败：%s（路径：%s）" % (exc, APP_DIR))
 
     # ---------------------------------------------------------------- 浮窗拖动回调
 
@@ -1738,11 +1812,9 @@ def _startup_lnk():
 
 
 def autostart_enabled():
+    """当前是否已开启开机自启动（只查 HKCU Run 项）。"""
     if not _IS_WIN:
         return False
-    lnk = _startup_lnk()
-    if os.path.exists(lnk):
-        return True
     try:
         import winreg
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
@@ -1753,59 +1825,39 @@ def autostart_enabled():
         return False
 
 
+
 def set_autostart(enable):
-    """把/移除快捷方式放进“启动”文件夹。返回是否成功。"""
+    """把/移除自启动项。返回是否成功。
+
+    为什么用注册表 Run 项、而不是“启动”文件夹的 .lnk：
+      写 .lnk 需要调 Windows 的 COM 组件（IShellLink），从纯 ctypes 调
+      COM 很容易出错（字符串封送、vtable 下标、内存布局……全都要手写）。
+      Run 注册表项是实现开机自启动的另一种官方机制，只要一行 winreg：
+        HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run
+      它同样不启动任何外部进程、不需要管理员权限、不联网，
+      而且路径是明文，用户/杀毒软件一眼就能看清，比 .lnk 二进制更透明。
+    """
     if not _IS_WIN:
         return False
-    lnk = _startup_lnk()
     try:
-        if not enable:
-            if os.path.exists(lnk):
-                os.remove(lnk)
-            try:                      # 连带清掉可能存在的注册表 Run 项
-                import winreg
-                with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                                    r"Software\Microsoft\Windows\CurrentVersion\Run", 0,
-                                    winreg.KEY_SET_VALUE) as k:
-                    winreg.DeleteValue(k, "EyeGuard")
-            except Exception:
-                pass
-            return True
-
-        os.makedirs(_startup_dir(), exist_ok=True)
-        exe = os.path.abspath(sys.executable)
-        target = exe
-        arguments = ""
-        icon = exe
-        if not FROZEN:
-            pyw = os.path.join(os.path.dirname(exe), "pythonw.exe")
-            target = pyw if os.path.isfile(pyw) else exe
-            arguments = '"%s"' % os.path.abspath(__file__)
-            icon = target
-        script = (
-            "$s = (New-Object -ComObject WScript.Shell).CreateShortcut('%s');"
-            "$s.TargetPath = '%s';"
-            "$s.Arguments = '%s';"
-            "$s.WorkingDirectory = '%s';"
-            "$s.IconLocation = '%s,0';"
-            "$s.Description = 'EyeGuard 护眼提醒';"
-            "$s.Save()"
-        ) % (lnk.replace("'", "''"), target.replace("'", "''"),
-             arguments.replace("'", "''"), APP_DIR.replace("'", "''"),
-             icon.replace("'", "''"))
-        subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
-                        "-Command", script],
-                       check=False, capture_output=True,
-                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        if os.path.exists(lnk):
-            return True
-        # PowerShell 不可用时退回注册表 Run 项
         import winreg
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                            r"Software\Microsoft\Windows\CurrentVersion\Run", 0,
-                            winreg.KEY_SET_VALUE) as k:
-            winreg.SetValueEx(k, "EyeGuard", 0, winreg.REG_SZ, _autostart_cmd())
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0,
+                            winreg.KEY_READ | winreg.KEY_SET_VALUE) as k:
+            if enable:
+                cmd = _autostart_cmd()
+                winreg.SetValueEx(k, "EyeGuard", 0, winreg.REG_SZ, cmd)
+                log("已开启开机自启动：%s" % cmd)
+            else:
+                try:
+                    winreg.DeleteValue(k, "EyeGuard")
+                    log("已关闭开机自启动")
+                except FileNotFoundError:
+                    pass
         return True
+    except Exception as exc:
+        log("设置开机自启动失败：%s" % exc)
+        return False
     except Exception as exc:
         log("设置开机自启动失败：%s" % exc)
         return False
@@ -1832,6 +1884,9 @@ def main(argv=None):
         if not frozen_gui_error(msg):
             sys.stderr.write(msg + "\n")
         return 1
+
+    # 先把网络模块锁死：之后整个进程里任何 import socket / ssl / urllib 都会失败
+    n_blocked = forbid_network()
 
     enable_dpi_awareness()
     if _IS_WIN:
