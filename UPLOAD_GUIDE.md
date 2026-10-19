@@ -11,22 +11,22 @@
 
 | 文件 | 行 | 内容 |
 | --- | --- | --- |
-| `README.md` | 92 | `git clone https://github.com/YOUR_NAME/20SecondsOfSilence.git` |
-| `README.md` | 末尾 | `[MIT](LICENSE) © 2026 YOUR_NAME` |
-| `LICENSE` | 3 | `Copyright (c) 2026 YOUR_NAME` |
-| `.github/ISSUE_TEMPLATE/config.yml` | 4 | 常见问题链接里的 `YOUR_NAME` |
+| `README.md` | 92 | `git clone https://github.com/MOBie2604/20SecondsOfSilence.git` |
+| `README.md` | 末尾 | `[MIT](LICENSE) © 2026 MOBie2604` |
+| `LICENSE` | 3 | `Copyright (c) 2026 MOBie2604` |
+| `.github/ISSUE_TEMPLATE/config.yml` | 4 | 常见问题链接里的 `MOBie2604` |
 
-用 PowerShell 一把替换（把 `你的用户名` 换成实际 GitHub 用户名）：
+用 PowerShell 一把替换（把 `MOBie2604` 换成实际 GitHub 用户名）：
 
 ```powershell
 cd 20SecondsOfSilence
-$u = "你的用户名"
-(Get-Content README.md -Raw -Encoding utf8) -replace 'YOUR_NAME', $u | Set-Content README.md -Encoding utf8 -NoNewline
-(Get-Content LICENSE -Raw -Encoding utf8)  -replace 'YOUR_NAME', $u | Set-Content LICENSE  -Encoding utf8 -NoNewline
-(Get-Content .github\ISSUE_TEMPLATE\config.yml -Raw -Encoding utf8) -replace 'YOUR_NAME', $u | Set-Content .github\ISSUE_TEMPLATE\config.yml -Encoding utf8 -NoNewline
+$u = "MOBie2604"
+(Get-Content README.md -Raw -Encoding utf8) -replace 'MOBie2604', $u | Set-Content README.md -Encoding utf8 -NoNewline
+(Get-Content LICENSE -Raw -Encoding utf8)  -replace 'MOBie2604', $u | Set-Content LICENSE  -Encoding utf8 -NoNewline
+(Get-Content .github\ISSUE_TEMPLATE\config.yml -Raw -Encoding utf8) -replace 'MOBie2604', $u | Set-Content .github\ISSUE_TEMPLATE\config.yml -Encoding utf8 -NoNewline
 
 # 顺便设置 git 身份（之前是占位符）
-git config user.name  "你的用户名"
+git config user.name  "MOBie2604"
 git config user.email "你的邮箱"
 git add -A
 git commit -m "docs: 填入仓库地址和作者信息"
@@ -52,11 +52,11 @@ git commit -m "docs: 填入仓库地址和作者信息"
 
 ## 第 2 步：推送
 
-GitHub 建好后会显示一串命令，用下面这段（换成你的用户名）：
+GitHub 建好后会显示一串命令，用下面这段（换成MOBie2604）：
 
 ```powershell
 cd 20SecondsOfSilence
-git remote add origin https://github.com/你的用户名/20SecondsOfSilence.git
+git remote add origin https://github.com/MOBie2604/20SecondsOfSilence.git
 git push -u origin main
 ```
 
@@ -103,7 +103,7 @@ README 里现在只有图标 `assets/20SecondsOfSilence.png`。如果想让项�
 
 上传前对照一下：
 
-- [ ] 3 处 `YOUR_NAME` 都替换了
+- [ ] 3 处 `MOBie2604` 都替换了
 - [ ] `git status` 干净，没有 `dist/`、`build/`、`20SecondsOfSilence.log`
 - [ ] `python _smoke_test.py` 输出 `ALL OK`
 - [ ] GitHub 建仓库时**没有**勾选 README / gitignore / license

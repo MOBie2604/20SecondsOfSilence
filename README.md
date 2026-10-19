@@ -88,7 +88,7 @@
 
 ```bash
 # 1. 克隆
-git clone https://github.com/YOUR_NAME/20SecondsOfSilence.git
+git clone https://github.com/MOBie2604/20SecondsOfSilence.git
 cd 20SecondsOfSilence
 
 # 2. 运行（没有任何依赖要装）
@@ -407,4 +407,4 @@ python _smoke_test.py
 
 ## License
 
-[MIT](LICENSE) © 2026 YOUR_NAME
+[MIT](LICENSE) © 2026 MOBie2604
