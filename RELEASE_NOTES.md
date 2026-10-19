@@ -1,6 +1,6 @@
 # 发布说明模板 —— 复制到 GitHub Release 页面使用
 
-## EyeGuard v1.0.0 — 第一次发布
+## 20SecondsOfSilence v1.0.0 — 第一次发布
 
 一个纯 Python 标准库写的护眼强制休息提醒，零第三方依赖，完全离线。
 
@@ -8,10 +8,10 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| `EyeGuard-win64.zip` | **Windows 免安装版**，解压后双击 `EyeGuard.exe` 即可，**不需要装 Python** |
+| `20SecondsOfSilence-win64.zip` | **Windows 免安装版**，解压后双击 `20SecondsOfSilence.exe` 即可，**不需要装 Python** |
 | 源码 (`Source code`) | 任意平台，`python main.py` 运行 |
 
-> 解压后请保持 `EyeGuard.exe` 和 `_internal\` 文件夹在同一目录，**不要只拿出单个 exe**。
+> 解压后请保持 `20SecondsOfSilence.exe` 和 `_internal\` 文件夹在同一目录，**不要只拿出单个 exe**。
 
 ### 这个版本有什么
 
@@ -44,10 +44,10 @@
 
 ## 安装步骤（给第一次用的人）
 
-1. 下载 `EyeGuard-win64.zip` 并解压到任意目录（**路径含中文和空格也没问题**）
-2. 双击 `EyeGuard.exe`
+1. 下载 `20SecondsOfSilence-win64.zip` 并解压到任意目录（**路径含中文和空格也没问题**）
+2. 双击 `20SecondsOfSilence.exe`
 3. 屏幕左上角出现倒计时小浮窗，说明正常运行
 4. 想改间隔：右键浮窗 →「打开配置文件夹」→ 改 `config.json` 里的 `interval_minutes`
-5. 想关掉：右键浮窗 →「退出 EyeGuard」
+5. 想关掉：右键浮窗 →「退出 20SecondsOfSilence」
 
-第一次运行会在 exe 旁边自动生成 `config.json` 和 `eyeguard.log`。
+第一次运行会在 exe 旁边自动生成 `config.json` 和 `20SecondsOfSilence.log`。

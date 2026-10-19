@@ -1,4 +1,4 @@
-# EyeGuard · 强制休息护眼提醒
+# 20SecondsOfSilence · 强制休息护眼提醒
 
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20|%20macOS%20|%20Linux-lightgrey.svg)
@@ -8,12 +8,12 @@
 
 > **自律辅助软件**：本工具为帮助自己控制长时间玩游戏的用户而写。
 > **所有行为 100% 在本机执行，绝对不联网、不收集、不上传任何数据**，没有统计、没有更新检查、
-> 没有账号、没有任何网络请求代码。日志只会写在你本地的 `eyeguard.log` 里。
+> 没有账号、没有任何网络请求代码。日志只会写在你本地的 `20SecondsOfSilence.log` 里。
 
 一个很小的 Windows 桌面程序：每玩一段时间，用一个**全屏、不可随手关掉**的倒计时提醒你
 抬头看看 6 米以外的地方。单文件 `main.py`，纯 Python 标准库，**零第三方依赖**。
 
-![EyeGuard](assets/eyeguard.png)
+![20SecondsOfSilence](assets/20SecondsOfSilence.png)
 
 ```text
 ┌─ 常驻浮窗 ──────────┐   ┌─ 提前预警 ──────────┐   ┌─ 全屏提醒（25 秒） ────────┐
@@ -25,7 +25,7 @@
 
 ### 为什么不用现成的护眼软件
 
-| | EyeGuard | 常见护眼软件 |
+| | 20SecondsOfSilence | 常见护眼软件 |
 | --- | --- | --- |
 | 第三方依赖 | **0 个**，纯标准库 | 一堆 |
 | 联网 / 遥测 | **完全没有** | 多数有检查更新 |
@@ -63,7 +63,7 @@
 | **屏蔽快捷键**：全屏期间吞掉 `Win`、`Alt+Tab`、`Alt+F4`、`Alt+Esc`、`Ctrl+Esc` | 无 | ✅ 开 | `fullscreen.block_task_switch_keys`: `false` |
 | **隐藏鼠标指针**：全屏期间指针消失 | 无 | ✅ 开 | `fullscreen.hide_cursor`: `false` |
 | **单实例**：重复打开只提示不启动 | 无 | ✅ 开 | 命令行加 `--allow-multi` |
-| **开机自启** | 必须你在右键菜单里手动勾选 | ❌ 关 | 右键菜单「关机自动启动」取消勾选，或删除启动文件夹里的 `EyeGuard.lnk` |
+| **开机自启** | 必须你在右键菜单里手动勾选 | ❌ 关 | 右键菜单「关机自动启动」取消勾选，或删除启动文件夹里的 `20SecondsOfSilence.lnk` |
 | **不静音**：*本程序不调用任何音频接口，也没有静音/调音量代码* | — | — | 无需关闭（本来就没有） |
 | **不联网**：*源码里没有 `socket` / `urllib` / `requests` / `http` 等任何网络调用* | — | — | 无需关闭（本来就没有） |
 | **管理员权限**：*不需要，也不请求，清单文件里是 `asInvoker`* | — | — | — |
@@ -88,8 +88,8 @@
 
 ```bash
 # 1. 克隆
-git clone https://github.com/YOUR_NAME/eye_guard.git
-cd eye_guard
+git clone https://github.com/YOUR_NAME/20SecondsOfSilence.git
+cd 20SecondsOfSilence
 
 # 2. 运行（没有任何依赖要装）
 python main.py
@@ -115,7 +115,7 @@ python main.py
 
 1. 屏幕上出现一个**置顶半透明小浮窗**，显示距离下一次休息还有多久。
 2. 想调什么就右键浮窗 →「打开配置文件夹」，改 `config.json`，保存后 **1 秒内自动生效**。
-3. 不想用了：右键浮窗 →「退出 EyeGuard」，然后把它从启动项里删掉即可。
+3. 不想用了：右键浮窗 →「退出 20SecondsOfSilence」，然后把它从启动项里删掉即可。
 
 ### 后台静默运行
 
@@ -133,14 +133,14 @@ pythonw main.py
 不想装 Python 的话，直接去 **[Releases](../../releases/latest)** 页面下载：
 
 ```
-EyeGuard-win64.zip
-├── EyeGuard.exe          ← 双击这个
+20SecondsOfSilence-win64.zip
+├── 20SecondsOfSilence.exe   ← 双击这个
 └── _internal/            ← 必须和 exe 放在一起，别删
 ```
 
-解压到任意目录（**路径含中文和空格也没问题**），双击 `EyeGuard.exe` 即可，**不需要装 Python**。
+解压到任意目录（**路径含中文和空格也没问题**），双击 `20SecondsOfSilence.exe` 即可，**不需要装 Python**。
 
-> **注意不能只拿出单个 `EyeGuard.exe`** —— 它依赖旁边的 `_internal` 目录，单拿一个 exe 会启动失败。
+> **注意不能只拿出单个 `20SecondsOfSilence.exe`** —— 它依赖旁边的 `_internal` 目录，单拿一个 exe 会启动失败。
 
 `config.json` 会在 exe 同级目录**首次运行时自动生成**，之后修改、热重载、右键菜单等行为与源码版完全一致。
 
@@ -158,11 +158,11 @@ EyeGuard-win64.zip
 build.bat
 ```
 
-产物在 `dist\EyeGuard\`（已在 `.gitignore` 里，不会误提交）。手动等价命令：
+产物在 `dist\20SecondsOfSilence\`（已在 `.gitignore` 里，不会误提交）。手动等价命令：
 
 ```bat
-python -m PyInstaller main.py --onedir --windowed --name EyeGuard ^
-    --icon "assets\eyeguard.ico" --add-data "assets;assets" ^
+python -m PyInstaller main.py --onedir --windowed --name 20SecondsOfSilence ^
+    --icon "assets\20SecondsOfSilence.ico" --add-data "assets;assets" ^
     --noconfirm --clean
 ```
 
@@ -186,7 +186,7 @@ python -m PyInstaller main.py --onedir --windowed --name EyeGuard ^
 | 重新加载 config.json | 手动生效配置（不等自动重载） |
 | 打开配置文件夹 | 打开程序所在目录 |
 | 开机自动启动（Windows） | 勾选后写入启动文件夹（只写当前用户，不需要管理员） |
-| 退出 EyeGuard | 退出 |
+| 退出 20SecondsOfSilence | 退出 |
 
 ---
 

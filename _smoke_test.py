@@ -24,7 +24,7 @@ CFG = os.path.join(SANDBOX, "config.json")
 
 import main as M  # noqa: E402
 
-M.LOG_PATH = os.path.join(SANDBOX, "eyeguard.log")
+M.LOG_PATH = os.path.join(SANDBOX, "20SecondsOfSilence.log")
 
 ok = True
 
@@ -77,7 +77,7 @@ check("inactive => nothing blocked", not kb._should_block(0x5B))
 M.enable_dpi_awareness()
 root = M.tk.Tk()
 root.withdraw()
-app = M.EyeGuardApp(CFG)
+app = M.SecondsOfSilenceApp(CFG)
 app.root.destroy()
 app.root = root
 app._build_menu()

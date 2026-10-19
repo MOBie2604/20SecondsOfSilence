@@ -15,7 +15,7 @@ body:
       label: 你怎么运行的？
       options:
         - 源码版（python main.py）
-        - 打包版（Release 里的 EyeGuard.exe）
+        - 打包版（Release 里的 20SecondsOfSilence.exe）
     validations:
       required: true
 
@@ -69,7 +69,7 @@ body:
     attributes:
       label: 日志
       description: |
-        把程序目录下 `eyeguard.log` 的内容贴上来（在程序目录里找，或用右键菜单「打开配置文件夹」）。
+        把程序目录下 `20SecondsOfSilence.log` 的内容贴上来（在程序目录里找，或用右键菜单「打开配置文件夹」）。
         日志不含任何隐私信息，只有启动/预警/提醒的时间点和错误。
       render: text
     validations:

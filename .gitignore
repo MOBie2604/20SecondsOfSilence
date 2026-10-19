@@ -1,5 +1,5 @@
-# EyeGuard 运行产物（每台机器自己生成，不要提交）
-eyeguard.log
+# 20SecondsOfSilence 运行产物（每台机器自己生成，不要提交）
+20SecondsOfSilence.log
 config.json.tmp
 *.log
 
@@ -24,6 +24,6 @@ dist/
 Thumbs.db
 desktop.ini
 
-# ���Բ���
+# ���Բ���
 _smoke_tmp/
 _smoke_tmp

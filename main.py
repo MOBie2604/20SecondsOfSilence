@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-眼保健强制休息提醒（EyeGuard）—— 单文件桌面小程序
+眼保健强制休息提醒（20SecondsOfSilence）—— 单文件桌面小程序
 ==================================================
 
 纯 Python 标准库实现（tkinter + Windows 下的 ctypes），完全离线、不联网。
@@ -102,7 +102,7 @@ def forbid_network():
                                                                  "xmlrpc", "socketserver", "asyncio", "webbrowser",
                                                                  "requests", "urllib3", "aiohttp", "httpx", "websocket"):
                 raise ImportError(
-                    "EyeGuard 已禁用网络模块：%s（本程序承诺绝不联网）" % fullname)
+                    "20SecondsOfSilence 已禁用网络模块：%s（本程序承诺绝不联网）" % fullname)
             return None
 
     # 装在 meta_path 最前面，保证先于任何 finder 命中
@@ -126,13 +126,13 @@ def _app_dir():
 
 
 APP_DIR = _app_dir()
-LOG_PATH = os.path.join(APP_DIR, "eyeguard.log")
+LOG_PATH = os.path.join(APP_DIR, "20SecondsOfSilence.log")
 DEFAULT_CONFIG_PATH = os.path.join(APP_DIR, "config.json")
 
 
 
 def log(msg):
-    """写一行带时间戳的日志：控制台 + eyeguard.log（便于排查问题）。"""
+    """写一行带时间戳的日志：控制台 + 20SecondsOfSilence.log（便于排查问题）。"""
     line = "[%s] %s" % (datetime.datetime.now().strftime("%H:%M:%S"), msg)
     try:
         print(line, flush=True)
@@ -467,7 +467,7 @@ class KeyboardBlocker(object):
             return True
         self._error = None
         self._ready.clear()
-        self._thread = threading.Thread(target=self._run, name="EyeGuardHook", daemon=True)
+        self._thread = threading.Thread(target=self._run, name="SecondsOfSilenceHook", daemon=True)
         self._thread.start()
         self._ready.wait(timeout=2.0)
         if self._hook is None:
@@ -1062,7 +1062,7 @@ class FloatingWindow(object):
         self.win = tk.Toplevel(app.root)
         self.win.withdraw()
         self.win.overrideredirect(True)          # 无边框（各平台都支持）
-        self.win.title("EyeGuard")
+        self.win.title("20SecondsOfSilence")
         try:
             self.win.attributes("-topmost", True)
         except Exception:
@@ -1316,7 +1316,7 @@ class FloatingWindow(object):
 # 7. 主程序：调度循环 / 状态机
 # =============================================================================
 
-class EyeGuardApp(object):
+class SecondsOfSilenceApp(object):
     TICK_MS = 100            # 浮窗刷新周期（毫秒）
     CONFIG_CHECK_MS = 2000   # 配置文件热重载检查周期
     MENU_POLL_MS = 150       # 右键菜单“是否已关闭”的轮询周期
@@ -1329,7 +1329,7 @@ class EyeGuardApp(object):
 
         self.root = tk.Tk()
         self.root.withdraw()                 # 主窗口不显示，程序靠浮窗常驻
-        self.root.title("EyeGuard · 护眼提醒")
+        self.root.title("20SecondsOfSilence · 护眼提醒")
         self.ui_font = self._pick_font()
 
         self.floating = None
@@ -1416,7 +1416,7 @@ class EyeGuardApp(object):
                                       variable=self.autostart_var,
                                       command=self.toggle_autostart)
         self.menu.add_separator()
-        self.menu.add_command(label="退出 EyeGuard", command=self.quit)
+        self.menu.add_command(label="退出 20SecondsOfSilence", command=self.quit)
 
     def toggle_autostart(self):
         want = bool(self.autostart_var.get())
@@ -1781,7 +1781,7 @@ def single_instance_lock():
         k = ctypes.WinDLL("kernel32", use_last_error=True)
         k.CreateMutexW.restype = wintypes.HANDLE
         k.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
-        h = k.CreateMutexW(None, False, "Global\\EyeGuard_SingleInstance_Mutex")
+        h = k.CreateMutexW(None, False, "Global\\20SecondsOfSilence_SingleInstance_Mutex")
         if ctypes.get_last_error() == 183:      # ERROR_ALREADY_EXISTS
             return False, h
         return True, h
@@ -1789,7 +1789,7 @@ def single_instance_lock():
         return True, None
 
 
-def _windows_message_box(text, title="EyeGuard"):
+def _windows_message_box(text, title="20SecondsOfSilence"):
     """最朴素的消息框（Windows API 直接弹，不依赖 tk）。"""
     try:
         import ctypes
@@ -1819,7 +1819,7 @@ def _startup_dir():
 
 
 def _startup_lnk():
-    return os.path.join(_startup_dir(), "EyeGuard.lnk")
+    return os.path.join(_startup_dir(), "20SecondsOfSilence.lnk")
 
 
 def autostart_enabled():
@@ -1830,7 +1830,7 @@ def autostart_enabled():
         import winreg
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
                             r"Software\Microsoft\Windows\CurrentVersion\Run") as k:
-            winreg.QueryValueEx(k, "EyeGuard")
+            winreg.QueryValueEx(k, "20SecondsOfSilence")
             return True
     except Exception:
         return False
@@ -1857,11 +1857,11 @@ def set_autostart(enable):
                             winreg.KEY_READ | winreg.KEY_SET_VALUE) as k:
             if enable:
                 cmd = _autostart_cmd()
-                winreg.SetValueEx(k, "EyeGuard", 0, winreg.REG_SZ, cmd)
+                winreg.SetValueEx(k, "20SecondsOfSilence", 0, winreg.REG_SZ, cmd)
                 log("已开启开机自启动：%s" % cmd)
             else:
                 try:
-                    winreg.DeleteValue(k, "EyeGuard")
+                    winreg.DeleteValue(k, "20SecondsOfSilence")
                     log("已关闭开机自启动")
                 except FileNotFoundError:
                     pass
@@ -1878,11 +1878,11 @@ def frozen_gui_error(text):
     """打包成无控制台的 exe 时，错误必须弹窗，否则用户什么都看不到。"""
     if not FROZEN:
         return False
-    return _windows_message_box(text, "EyeGuard 出错了")
+    return _windows_message_box(text, "20SecondsOfSilence 出错了")
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="EyeGuard —— 强制休息护眼提醒")
+    parser = argparse.ArgumentParser(description="20SecondsOfSilence —— 强制休息护眼提醒")
     parser.add_argument("--config", default=DEFAULT_CONFIG_PATH,
                         help="配置文件路径（默认：与程序同目录的 config.json）")
     parser.add_argument("--demo", action="store_true",
@@ -1903,23 +1903,23 @@ def main(argv=None):
     if _IS_WIN:
         try:
             import ctypes
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("EyeGuard.RestReminder")
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("20SecondsOfSilence.RestReminder")
         except Exception:
             pass
         if not args.allow_multi:
             ok, _handle = single_instance_lock()
             if not ok:
-                log("已经有了一个 EyeGuard 在运行")
+                log("已经有了一个 20SecondsOfSilence 在运行")
                 if FROZEN:
                     # 双击 exe 再开一次：提示一下，别让人以为程序没启动
                     _windows_message_box(
-                        "EyeGuard 已经在运行了。\n\n"
+                        "20SecondsOfSilence 已经在运行了。\n\n"
                         "它就在屏幕角落的那个小浮窗里（右键可以退出）。\n"
                         "如果你想再开一个，请用命令行加 --allow-multi。",
-                        "EyeGuard 已在运行")
+                        "20SecondsOfSilence 已在运行")
                 return 0
 
-    log("EyeGuard 启动：%s / %s" % (
+    log("20SecondsOfSilence 启动：%s / %s" % (
         "打包版" if FROZEN else "Python %s" % platform.python_version(),
         platform.platform()))
     if _IS_MAC:
@@ -1928,11 +1928,11 @@ def main(argv=None):
         log("Linux：全屏置顶与抢焦点可用；系统快捷键取决于窗口管理器，可能无法拦截。")
 
     try:
-        app = EyeGuardApp(args.config, demo=args.demo)
+        app = SecondsOfSilenceApp(args.config, demo=args.demo)
     except Exception as exc:
         import traceback
         log("启动失败：%s\n%s" % (exc, traceback.format_exc()))
-        if frozen_gui_error("EyeGuard 启动失败：\n\n%s" % exc):
+        if frozen_gui_error("20SecondsOfSilence 启动失败：\n\n%s" % exc):
             return 1
         raise
 

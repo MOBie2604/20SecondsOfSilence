@@ -11,7 +11,7 @@
 
 | 文件 | 行 | 内容 |
 | --- | --- | --- |
-| `README.md` | 92 | `git clone https://github.com/YOUR_NAME/eye_guard.git` |
+| `README.md` | 92 | `git clone https://github.com/YOUR_NAME/20SecondsOfSilence.git` |
 | `README.md` | 末尾 | `[MIT](LICENSE) © 2026 YOUR_NAME` |
 | `LICENSE` | 3 | `Copyright (c) 2026 YOUR_NAME` |
 | `.github/ISSUE_TEMPLATE/config.yml` | 4 | 常见问题链接里的 `YOUR_NAME` |
@@ -19,7 +19,7 @@
 用 PowerShell 一把替换（把 `你的用户名` 换成实际 GitHub 用户名）：
 
 ```powershell
-cd eye_guard
+cd 20SecondsOfSilence
 $u = "你的用户名"
 (Get-Content README.md -Raw -Encoding utf8) -replace 'YOUR_NAME', $u | Set-Content README.md -Encoding utf8 -NoNewline
 (Get-Content LICENSE -Raw -Encoding utf8)  -replace 'YOUR_NAME', $u | Set-Content LICENSE  -Encoding utf8 -NoNewline
@@ -37,7 +37,7 @@ git commit -m "docs: 填入仓库地址和作者信息"
 ## 第 1 步：在 GitHub 上建空仓库
 
 1. 打开 <https://github.com/new>
-2. **Repository name** 填 `eye_guard`
+2. **Repository name** 填 `20SecondsOfSilence`
 3. **Description** 复制这句：
 
    ```text
@@ -55,8 +55,8 @@ git commit -m "docs: 填入仓库地址和作者信息"
 GitHub 建好后会显示一串命令，用下面这段（换成你的用户名）：
 
 ```powershell
-cd eye_guard
-git remote add origin https://github.com/你的用户名/eye_guard.git
+cd 20SecondsOfSilence
+git remote add origin https://github.com/你的用户名/20SecondsOfSilence.git
 git push -u origin main
 ```
 
@@ -72,16 +72,16 @@ git push -u origin main
 `dist/` 故意没进仓库，exe 通过 Release 分发。zip 已经打包好在：
 
 ```
-C:\Users\26940\Documents\deepseek-harness\default-workspace\eye_guard-release\EyeGuard-win64.zip
+C:\Users\26940\Documents\deepseek-harness\default-workspace\20SecondsOfSilence-release\20SecondsOfSilence-win64.zip
 ```
 
 操作：
 
 1. 仓库页面右侧 **Releases** → **Create a new release**
 2. **Choose a tag** 输入 `v1.0.0`，点 "Create new tag: v1.0.0 on publish"
-3. **Release title**：`EyeGuard v1.0.0 — 第一次发布`
-4. **Description**：把项目里 `RELEASE_NOTES.md` 的正文（从 `## EyeGuard v1.0.0` 开始）整段粘进去
-5. **Attach binaries**：把 `EyeGuard-win64.zip` 拖进那个虚线框
+3. **Release title**：`20SecondsOfSilence v1.0.0 — 第一次发布`
+4. **Description**：把项目里 `RELEASE_NOTES.md` 的正文（从 `## 20SecondsOfSilence v1.0.0` 开始）整段粘进去
+5. **Attach binaries**：把 `20SecondsOfSilence-win64.zip` 拖进那个虚线框
 6. 点 **Publish release**
 
 ## 第 4 步：给仓库加 Topics（提高被发现率）
@@ -94,7 +94,7 @@ eye-care  pomodoro  tkinter  python  windows  productivity  health  offline  no-
 
 ## 第 5 步（可选）：加个演示图
 
-README 里现在只有图标 `assets/eyeguard.png`。如果想让项目页更好看，可以把
+README 里现在只有图标 `assets/20SecondsOfSilence.png`。如果想让项目页更好看，可以把
 浮窗、预警态、全屏提醒三张截图放进 `assets/` 并在 README 里引用。
 
 ---
@@ -104,10 +104,10 @@ README 里现在只有图标 `assets/eyeguard.png`。如果想让项目页更好
 上传前对照一下：
 
 - [ ] 3 处 `YOUR_NAME` 都替换了
-- [ ] `git status` 干净，没有 `dist/`、`build/`、`eyeguard.log`
+- [ ] `git status` 干净，没有 `dist/`、`build/`、`20SecondsOfSilence.log`
 - [ ] `python _smoke_test.py` 输出 `ALL OK`
 - [ ] GitHub 建仓库时**没有**勾选 README / gitignore / license
-- [ ] Release 里传的是 `EyeGuard-win64.zip`（不是单独的 exe）
+- [ ] Release 里传的是 `20SecondsOfSilence-win64.zip`（不是单独的 exe）
 - [ ] Release 说明里提醒了"要整个文件夹，不能只拿 exe"
 
 ---
@@ -115,7 +115,7 @@ README 里现在只有图标 `assets/eyeguard.png`。如果想让项目页更好
 ## 仓库里到底有什么
 
 ```
-eye_guard/
+20SecondsOfSilence/
 ├── main.py                           程序本体（1827 行，单文件）
 ├── config.json                       默认配置（43 个键）
 ├── README.md                         项目主页文档
@@ -127,11 +127,11 @@ eye_guard/
 ├── .gitignore                        排除 dist/ build/ *.log
 ├── .gitattributes                    统一换行符
 ├── assets/
-│   ├── eyeguard.ico / .png           图标
+│   ├── 20SecondsOfSilence.ico / .png           图标
 └── .github/
     ├── ISSUE_TEMPLATE/               Bug / 功能建议模板 + 联系链接
     └── PULL_REQUEST_TEMPLATE.md      PR 模板（含"不许加依赖/联网"检查项）
 ```
 
-刻意**没有**放进仓库的：`dist/`（26 MB 二进制）、`build/`、`*.spec`、`eyeguard.log`、
+刻意**没有**放进仓库的：`dist/`（26 MB 二进制）、`build/`、`*.spec`、`20SecondsOfSilence.log`、
 `__pycache__/`。这些都在 `.gitignore` 里。

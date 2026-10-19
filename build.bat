@@ -1,8 +1,8 @@
 @echo off
 REM ============================================================================
-REM  EyeGuard build script (Windows) - ASCII only, safe for any code page.
+REM  20SecondsOfSilence build script (Windows) - ASCII only, safe for any code page.
 REM ----------------------------------------------------------------------------
-REM  Output: dist\EyeGuard\  (the whole folder: EyeGuard.exe + _internal\)
+REM  Output: dist\20SecondsOfSilence\  (the whole folder: 20SecondsOfSilence.exe + _internal\)
 REM
 REM  NOTE: we deliberately use --onedir, NOT --onefile.
 REM  A --onefile exe unpacks itself into %TEMP%\_MEIxxxx on EVERY start.
@@ -32,8 +32,8 @@ echo [3/3] Building ...
 python -m PyInstaller main.py ^
     --onedir ^
     --windowed ^
-    --name EyeGuard ^
-    --icon "assets\eyeguard.ico" ^
+    --name 20SecondsOfSilence ^
+    --icon "assets\20SecondsOfSilence.ico" ^
     --add-data "assets;assets" ^
     --exclude-module PIL ^
     --exclude-module numpy ^
@@ -48,8 +48,8 @@ if errorlevel 1 goto failed
 
 echo.
 echo ============================================================
-echo  BUILD OK: dist\EyeGuard\EyeGuard.exe
-echo  Ship the WHOLE dist\EyeGuard folder (zip it), not the exe alone:
+echo  BUILD OK: dist\20SecondsOfSilence\20SecondsOfSilence.exe
+echo  Ship the WHOLE dist\20SecondsOfSilence folder (zip it), not the exe alone:
 echo  the exe depends on the _internal folder next to it.
 echo  config.json is auto-created next to the exe on first run.
 echo ============================================================

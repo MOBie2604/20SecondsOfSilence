@@ -1,4 +1,4 @@
-# EyeGuard 依赖清单
+# 20SecondsOfSilence 依赖清单
 #
 # 结论：不需要任何第三方库。
 # 程序只用 Python 标准库：tkinter / ctypes / json / threading / math / time …
